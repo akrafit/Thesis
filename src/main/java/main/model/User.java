@@ -4,7 +4,10 @@ import com.google.gson.Gson;
 import lombok.Data;
 
 import javax.persistence.*;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Entity
 @Table(name = "users")
@@ -56,10 +59,21 @@ public class User {
     @Column(length = 65535, columnDefinition = "text")
     private String photo;
 
-    public UserShort getUserShort() {
-
-        UserShort userShort = new UserShort(this.id, this.name);
-        return userShort;
+    public Map<String, Object> getUserShortMap() {
+        Map<String, Object> userShortMap = new HashMap<>();
+        userShortMap.put("id",this.getId());
+        userShortMap.put("name",this.getName());
+        return userShortMap;
     }
+
+    public Map<String, Object> getUserShortMapPhoto() {
+        Map<String, Object> userShortMapPhoto = new HashMap<>();
+        userShortMapPhoto.put("id",this.getId());
+        userShortMapPhoto.put("name",this.getName());
+        //userShortMap.put("photo",this.getPhoto());
+        userShortMapPhoto.put("photo","777");
+        return userShortMapPhoto;
+    }
+
 }
 

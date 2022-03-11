@@ -1,8 +1,11 @@
 package main.model;
 
+import lombok.Data;
+
 import javax.persistence.*;
 
 @Entity
+@Data
 @Table(name = "tag2post")
 public class Tag2Post {
     @Id

@@ -7,6 +7,7 @@ import main.model.enums.ModerationStatus;
 import javax.persistence.*;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -57,25 +58,12 @@ public class Post {
     @JoinColumn(name = "user_id", insertable = false, updatable = false)
     private User user;
 
-    public ResponsePost getResponse(long postCount) throws ParseException{
-        SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        Long id = this.id;
-        long timestamp = sdf.parse(this.time).getTime()/1000;
-        UserShort user = this.user.getUserShort();
-        String title = this.title;
-        String announce = this.text;
-        int likeCount = this.postsVote.size();
-        int dislikeCount = this.postsVote.size();
-        int commentCount = this.postComments.size();
-        int viewCount = this.viewCount;
-        return new ResponsePost(id,timestamp,user,title,announce,likeCount,dislikeCount,commentCount,viewCount);
-    }
     public Map<String,Object> getMapResponse(long postCount) throws ParseException{
         SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         Map<String,Object> map = new HashMap<>();
         map.put("id",this.id);
         map.put("timestamp",sdf.parse(this.time).getTime()/1000);
-        map.put("user",this.user.getUserShort());
+        map.put("user",this.user.getUserShortMap());
         map.put("title",this.title);
         map.put("announce",this.text);
         map.put("likeCount",this.postsVote.size());
@@ -85,13 +73,30 @@ public class Post {
 
         return map;
     }
-/*
-    public String getJSONObject() throws ParseException {
-        String jo = getResponse(postCount).toString();
-        System.out.println(jo);
-        return jo;
-    }
 
- */
+    public static Map<String,Object> getSinglePost(Post singlePost) throws ParseException{
+        SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        Map<String,Object> map = new HashMap<>();
+        map.put("id",singlePost.getId());
+        map.put("active",true);
+        map.put("timestamp",sdf.parse(singlePost.getTime()).getTime()/1000);
+        map.put("user",singlePost.getUser().getUserShortMap());
+        map.put("title",singlePost.getTitle());
+        map.put("announce",singlePost.getText());
+        map.put("likeCount",singlePost.getPostsVote().size());
+        map.put("dislikeCount",singlePost.getPostsVote().size());
+        map.put("viewCount",singlePost.getViewCount());
+        //map.put("comments", PostComment.getPostCommentsArray(singlePost.postComments));
+
+        map.put("comments", PostComment.getPostCommentsArray(singlePost.getPostComments()));
+
+        ArrayList<String> tags = new ArrayList<>();
+        singlePost.getTag2Posts().forEach(tag2Post -> {
+            tags.add(tag2Post.getTag().getName());
+        });
+        map.put("tags", tags);
+
+        return map;
+    }
 }
 
