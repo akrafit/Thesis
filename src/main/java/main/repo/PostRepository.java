@@ -16,6 +16,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Repository
@@ -23,42 +24,34 @@ public interface PostRepository extends PagingAndSortingRepository<Post,Long>, J
     @Query("select count(p) from Post p where p.isActive = 1 and p.moderationStatus = 'ACCEPTED'")
     long countAllActivePosts();
 
+    @Query("select count(p) from Post p where p.moderationStatus = 'NEW'")
+    int countAllPostIsModeration();
+
+    @Query(value = "SELECT time, COUNT(id) FROM thesis_db.posts where posts.is_active = 1 and posts.moderation_status = 'ACCEPTED'" +
+            " group by DATE_FORMAT(time,'%Y-%m-%d')",
+            nativeQuery = true)
+    List<Object[]> countAllPostGroupByDay();
+
+    @Query(value = "SELECT time FROM thesis_db.posts group by DATE_FORMAT(time,'%Y')",
+            nativeQuery = true)
+    List<String> AllPostGroupByYear();
+
     Page<Post> findByIsActiveAndModerationStatus(int isActive, ModerationStatus moderationStatus, Pageable pageable);
 
-    /*
-    @Query("select p from Post p where p.isActive = 1 and p.moderationStatus = 'ACCEPTED' and ")
-    Page<Post> findByTextAndIsActiveAndModerationStatus(String texts, int isActive, ModerationStatus moderationStatus, Pageable pageable);
-*/
-    //Page<Post> findByNameStartingWith(String name);
-    //Page<Post> findByNameEndingWith(String name);
- /*
-    @Query(value = "?1",
-            countQuery = "SELECT count(*) FROM posts",
-            nativeQuery = true)
-    List<Post> findByTexts(String textQuery);
-
-    @Query(value = "SELECT * FROM posts where posts.text like '%' ?1 '%'",
-            countQuery = "SELECT count(*) FROM posts",
-            nativeQuery = true)
-    List<Post> findByTexts(String textQuery);
-
-@Query("select p from Post p where p.text like concat('%', ?1, '%')")
-    List<Post> findByText(String name);
-*/
-
-    @Query("select p from Post p where p.isActive = 1 and p.moderationStatus = 'ACCEPTED' and p.text like %:name%")
-    List<Post> findByTexts(@Param("name")String name);
+   // @Query("select p from Post p where p.isActive = 1 and p.moderationStatus = 'ACCEPTED' and p.text like %:name%")
+   // List<Post> findByTexts(@Param("name")String name);
 
     @Query(value = "select p from Post p where p.isActive = 1 and p.moderationStatus = 'ACCEPTED' and p.text like concat('%', ?1, '%')",
            countQuery = "select count(p) from Post p where p.isActive = 1 and p.moderationStatus = 'ACCEPTED' and p.text like concat('%', ?1, '%')")
-        Page<Post> findByText(@Param("name") String name, Pageable pageable);
+        Page<Post> findByText( String name, Pageable pageable);
 
-    Page<Post> findByTextContains(String text, Pageable pageable);
+    //Page<Post> findByTextContains(String text, Pageable pageable);
 
-/*
-    @Query("select p from Post p where p.isActive = 1 and p.moderationStatus = 'ACCEPTED' and p.text like concat('%', ?1, '%')")
-    Page<Post> findTextByTextList(Collection<String> text, Pageable pageable);
-*/
+    @Query(value = "SELECT * FROM posts where posts.is_active = :active and posts.moderation_status = :status",
+            countQuery = "SELECT count(*) FROM posts where posts.is_active = :active and posts.moderation_status = :status",
+            nativeQuery = true)
+    Page<Post> findPostsByModeration(@Param("active")Integer active, @Param("status")String status, Pageable pageable);
+
     @Query(value = "SELECT * FROM posts where posts.is_active = 1 and posts.moderation_status = 'ACCEPTED' " +
             "group by posts.id order by (SELECT count(post_id) FROM post_comments where post_id = posts.id) desc",
             countQuery = "SELECT count(*) FROM posts where posts.is_active = 1 and posts.moderation_status = 'ACCEPTED'",
@@ -73,5 +66,17 @@ public interface PostRepository extends PagingAndSortingRepository<Post,Long>, J
 
     Post getOne(Long id);
 
+    @Query(value = "select p from Post p where p.isActive = 1 and p.moderationStatus = 'ACCEPTED' and p.time > :date and p.time < :endDate",
+            countQuery = "select count(p) from Post p where p.isActive = 1 and p.moderationStatus = 'ACCEPTED' and p.time > :date and p.time < :endDate")
+    Page<Post> findByDate(@Param("date")String date, @Param("endDate")String endDate, Pageable pageable);
 
+    @Query(value = "SELECT * FROM thesis_db.posts JOIN thesis_db.tag2post ON thesis_db.tag2post.post_id = thesis_db.posts.id WHERE tag_id = :tag",
+    countQuery = "SELECT count(*) FROM thesis_db.posts JOIN thesis_db.tag2post ON thesis_db.tag2post.post_id = thesis_db.posts.id WHERE tag_id = :tag",
+    nativeQuery = true)
+    Page<Post> findByTag(@Param("tag")Long tag, Pageable pageable);
+
+    @Query(value = "SELECT * FROM posts where posts.is_active = :active and posts.moderation_status = :status and posts.user_id = :user",
+            countQuery = "SELECT count(*) FROM posts where posts.is_active = :active and posts.moderation_status = :status and posts.user_id = :user",
+            nativeQuery = true)
+    Page<Post> findPostsByMy(@Param("user")Long user, @Param("active")Integer active, @Param("status")String status, Pageable pageable);
 }
