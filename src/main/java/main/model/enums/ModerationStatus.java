@@ -4,7 +4,4 @@ public enum ModerationStatus {
     NEW,
     ACCEPTED,
     DECLINED;
-
-    ModerationStatus() {
-    }
 }

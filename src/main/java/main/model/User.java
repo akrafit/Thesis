@@ -43,7 +43,7 @@ public class User {
 
     //users comments on post
     @OneToMany(cascade = CascadeType.ALL)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = false, insertable = false, updatable = false)
     private List<PostComment> userPostComments;
 
     @Column(name = "is_moderator", nullable = false, columnDefinition = "TINYINT(1)")
@@ -87,8 +87,7 @@ public class User {
         Map<String, Object> userShortMapPhoto = new HashMap<>();
         userShortMapPhoto.put("id",this.getId());
         userShortMapPhoto.put("name",this.getName());
-        //userShortMap.put("photo",this.getPhoto());
-        userShortMapPhoto.put("photo","777");
+        userShortMapPhoto.put("photo",this.getPhoto());
         return userShortMapPhoto;
     }
 
@@ -96,8 +95,7 @@ public class User {
         Map<String, Object> userForAuth = new HashMap<>();
         userForAuth .put("id",this.getId());
         userForAuth .put("name",this.getName());
-        //userShortMap.put("photo",this.getPhoto());
-        userForAuth .put("photo","777");
+        userForAuth .put("photo",this.getPhoto());
         userForAuth .put("email",this.getEmail());
         if(this.isModerator == 1){
             userForAuth .put("moderation",true);

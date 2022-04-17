@@ -1,10 +1,7 @@
 package main.model;
-
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import main.model.enums.ModerationStatus;
-
-
 import javax.persistence.*;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -35,11 +32,14 @@ public class Post {
 
     //comments on post
     @OneToMany(cascade = CascadeType.ALL)
-    @JoinColumn(name = "post_id", nullable = false)
+    @JoinColumn(name = "post_id", nullable = false, insertable = false, updatable = false)
     private List<PostComment> postComments;
 
     @Column(name = "is_active", nullable = false, columnDefinition = "TINYINT(1)")
     private int isActive;
+
+    @Column(name = "moderator_id")
+    private Long moderatorId;
 
     @Column(name = "moderation_status", length = 32, columnDefinition = "varchar(32) default 'NEW'")
     @Enumerated(EnumType.STRING)

@@ -1,6 +1,7 @@
 package main.model;
 
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import javax.persistence.*;
 import java.text.ParseException;
@@ -13,13 +14,21 @@ import java.util.Map;
 @Entity
 @Data
 @Table(name = "post_comments")
+@NoArgsConstructor
 public class PostComment{
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
 
+    public PostComment(String time, String text, Post post, User user) {
+        this.time = time;
+        this.text = text;
+        this.post = post;
+        this.user = user;
+    }
+
     @Column(name = "parent_id", columnDefinition = "int")
-    private String parentId;
+    private int parentId;
 
     @Column(nullable = false, columnDefinition = "DATETIME")
     private String time;
@@ -28,17 +37,17 @@ public class PostComment{
     private String text;
 
     @ManyToOne(cascade = CascadeType.ALL,fetch = FetchType.LAZY)
-    @JoinColumn(name = "post_id", insertable = false, updatable = false)
+    @JoinColumn(name = "post_id")
     private Post post;
 
     @ManyToOne(cascade = CascadeType.ALL,fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", insertable = false, updatable = false)
+    @JoinColumn(name = "user_id")
     private User user;
 
 
 
     public static ArrayList<Map> getPostCommentsArray(List<PostComment> postComment) throws ParseException {
-        SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         ArrayList<Map> arrayList = new ArrayList<>();
         postComment.forEach(PC->{
             Long time = null;
