@@ -22,7 +22,7 @@ public class Post {
 
     //likes & dislikes
     @OneToMany(cascade = CascadeType.ALL)
-    @JoinColumn(name = "post_id", nullable = false)
+    @JoinColumn(name = "post_id", insertable = false, updatable = false)
     private List<PostVote> postsVote;
 
     //tags on post
@@ -80,8 +80,10 @@ public class Post {
         map.put("user",this.user.getUserShortMap());
         map.put("title",this.title);
         map.put("announce", this.text.replaceAll("<.*?>" , ""));
-        map.put("likeCount",this.postsVote.size());
-        map.put("dislikeCount",this.postsVote.size());
+        long likeCount = this.postsVote.stream().filter(p -> p.getValue().equals("1")).count();
+        map.put("likeCount",likeCount);
+        long disLikeCount = this.postsVote.stream().filter(p -> p.getValue().equals("-1")).count();
+        map.put("dislikeCount",disLikeCount);
         map.put("commentCount",this.postComments.size());
         map.put("viewCount",this.viewCount);
 
@@ -97,8 +99,10 @@ public class Post {
         map.put("user",singlePost.getUser().getUserShortMap());
         map.put("title",singlePost.getTitle());
         map.put("text",singlePost.getText());
-        map.put("likeCount",singlePost.getPostsVote().size());
-        map.put("dislikeCount",singlePost.getPostsVote().size());
+        long likeCount = singlePost.getPostsVote().stream().filter(p -> p.getValue().equals("1")).count();
+        map.put("likeCount",likeCount);
+        long disLikeCount = singlePost.getPostsVote().stream().filter(p -> p.getValue().equals("-1")).count();
+        map.put("dislikeCount",disLikeCount);
         map.put("viewCount",singlePost.getViewCount());
         //map.put("comments", PostComment.getPostCommentsArray(singlePost.postComments));
 

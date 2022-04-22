@@ -8,11 +8,13 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.PagingAndSortingRepository;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collection;
 import java.util.List;
@@ -70,8 +72,8 @@ public interface PostRepository extends PagingAndSortingRepository<Post,Long>, J
             countQuery = "select count(p) from Post p where p.isActive = 1 and p.moderationStatus = 'ACCEPTED' and p.time > :date and p.time < :endDate")
     Page<Post> findByDate(@Param("date")String date, @Param("endDate")String endDate, Pageable pageable);
 
-    @Query(value = "SELECT * FROM thesis_db.posts JOIN thesis_db.tag2post ON thesis_db.tag2post.post_id = thesis_db.posts.id WHERE tag_id = :tag",
-    countQuery = "SELECT count(*) FROM thesis_db.posts JOIN thesis_db.tag2post ON thesis_db.tag2post.post_id = thesis_db.posts.id WHERE tag_id = :tag",
+    @Query(value = "SELECT * FROM posts JOIN tag2post ON tag2post.post_id = posts.id WHERE tag_id = :tag",
+    countQuery = "SELECT count(*) FROM posts JOIN tag2post ON tag2post.post_id = posts.id WHERE tag_id = :tag",
     nativeQuery = true)
     Page<Post> findByTag(@Param("tag")Long tag, Pageable pageable);
 
@@ -79,4 +81,21 @@ public interface PostRepository extends PagingAndSortingRepository<Post,Long>, J
             countQuery = "SELECT count(*) FROM posts where posts.is_active = :active and posts.moderation_status = :status and posts.user_id = :user",
             nativeQuery = true)
     Page<Post> findPostsByMy(@Param("user")Long user, @Param("active")Integer active, @Param("status")String status, Pageable pageable);
+
+    @Transactional
+    @Modifying
+    @Query(value = "UPDATE posts SET view_count = view_count + 1 WHERE id = :id",
+            nativeQuery = true)
+    void plusOneToVisit(@Param("id")Long id);
+
+    @Query(value = "SELECT MIN(time) FROM posts WHERE user_id = :id",
+            nativeQuery = true)
+    String findFirstPostUser(@Param("id")Long id);
+
+    @Query(value = "SELECT MIN(time) FROM posts",
+            nativeQuery = true)
+    String findFirstPost();
+
+    @Query(value = "select p from Post p")
+    List<Post> getAllPost();
 }

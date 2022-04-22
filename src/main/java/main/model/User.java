@@ -38,7 +38,7 @@ public class User {
 
     //likes & dislikes
     @OneToMany(cascade = CascadeType.ALL)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = false, insertable = false, updatable = false)
     private List<PostVote> postsVote;
 
     //users comments on post

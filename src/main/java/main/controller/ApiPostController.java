@@ -2,15 +2,9 @@ package main.controller;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import main.Main;
-import main.model.Post;
-import main.model.Tag;
-import main.model.Tag2Post;
-import main.model.User;
+import main.model.*;
 import main.model.enums.ModerationStatus;
-import main.repo.PostRepository;
-import main.repo.Tag2PostRepository;
-import main.repo.TagRepository;
-import main.repo.UserRepository;
+import main.repo.*;
 import main.specification.PostSpecification;
 import org.springframework.beans.factory.ObjectFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -71,6 +65,14 @@ public class ApiPostController {
         Post post = postRepository.getOne(id);
         if(id != null || post != null){
             try {
+                User user = getAuthorizedUser();
+                if(user != null) {
+                    if (!user.getId().equals(post.getUser().getId()) & user.getIsModerator() == 0) {
+                        postRepository.plusOneToVisit(post.getId());
+                    }
+                }else{
+                    postRepository.plusOneToVisit(post.getId());
+                }
                 return new ResponseEntity<>(Post.getSinglePost(post),HttpStatus.OK);
             } catch (ParseException e) {
                 e.printStackTrace();
@@ -240,6 +242,7 @@ public class ApiPostController {
         }
         if(errors.isEmpty()){
             Post post = new Post(title,text,active,sdf.format(timestampLong));
+            if(Main.globalSettings.get("POST_PREMODERATION").equals("NO"))post.setModerationStatus(ModerationStatus.ACCEPTED);
             post.setUser(user);
             List<Tag2Post> tag2Posts = new ArrayList<>();
             tags.forEach(t -> {
@@ -285,8 +288,9 @@ public class ApiPostController {
         }
         if(errors.isEmpty()){
             Post post = postRepository.getOne(id);
+
             post.setText(text);
-            System.out.println(text);
+            //System.out.println(text);
             post.setTime(sdf.format(timestampLong));
             post.setIsActive(active);
             post.setTitle(title);
@@ -302,12 +306,86 @@ public class ApiPostController {
                 tag2Posts.add(tag2Post);
             });
             post.setTag2Posts(tag2Posts);
-            post.setModerationStatus(ModerationStatus.NEW);
+            if(Main.globalSettings.get("POST_PREMODERATION").equals("NO")){post.setModerationStatus(ModerationStatus.ACCEPTED);
+            }else{
+                post.setModerationStatus(ModerationStatus.NEW);
+            }
             postRepository.save(post);
             map.put("result", true);
         }else{
             map.put("result", false);
             map.put("errors", errors);
+        }
+        return map;
+    }
+
+    @Autowired
+    private PostVoteRepository postVoteRepository;
+    @PostMapping("/like")
+    public Map<String,Object> like(@Valid @RequestBody JSONObject jsonObject){
+        Map<String,Object> map = new HashMap<>();
+        Long postId = jsonObject.getLong("post_id");
+        Post post = postRepository.getOne(postId);
+        User user = getAuthorizedUser();
+        SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        PostVote lastPostVote;
+        if(postId == null) map.put("result",false);
+        if(user == null) map.put("result",false);
+        if(map.isEmpty()){
+            //List<PostVote> lastPostVotes = postVoteRepository.findPostVote(post.getId(),user.getId());
+            List<PostVote> lastPostVotes = postVoteRepository.findPostVote(post,user);
+            if(!lastPostVotes.isEmpty()){
+                lastPostVote = lastPostVotes.get(0);
+                if(lastPostVote.getValue().equals("1")){
+                    map.put("result",false);
+                }else{
+                    lastPostVote.setValue("1");
+                    postVoteRepository.save(lastPostVote);
+                    map.put("result",true);
+            }
+            }else{
+                PostVote postVote = new PostVote();
+                postVote.setPost(post);
+                postVote.setUser(user);
+                postVote.setValue("1");
+                postVote.setTime(sdf.format(System.currentTimeMillis()));
+                postVoteRepository.save(postVote);
+                map.put("result",true);
+            }
+        }
+        return map;
+    }
+
+    @PostMapping("/dislike")
+    public Map<String,Object> dislike(@Valid @RequestBody JSONObject jsonObject){
+        Map<String,Object> map = new HashMap<>();
+        Long postId = jsonObject.getLong("post_id");
+        Post post = postRepository.getOne(postId);
+        User user = getAuthorizedUser();
+        SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        PostVote lastPostVote;
+        if(postId == null) map.put("result",false);
+        if(user == null) map.put("result",false);
+        if(map.isEmpty()){
+            List<PostVote> lastPostVotes = postVoteRepository.findPostVote(post,user);
+            if(!lastPostVotes.isEmpty()){
+                lastPostVote = lastPostVotes.get(0);
+                if(lastPostVote.getValue().equals("-1")){
+                    map.put("result",false);
+                }else{
+                    lastPostVote.setValue("-1");
+                    postVoteRepository.save(lastPostVote);
+                    map.put("result",true);
+                }
+            }else{
+                PostVote postVote = new PostVote();
+                postVote.setPost(post);
+                postVote.setUser(user);
+                postVote.setValue("-1");
+                postVote.setTime(sdf.format(System.currentTimeMillis()));
+                postVoteRepository.save(postVote);
+                map.put("result",true);
+            }
         }
         return map;
     }

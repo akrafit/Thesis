@@ -1,10 +1,10 @@
 package main.controller;
 import com.alibaba.fastjson.JSONObject;
-import lombok.Data;
 import main.Main;
 import main.model.*;
 import main.model.enums.ModerationStatus;
 import main.repo.*;
+import org.imgscalr.Scalr;
 import org.springframework.beans.factory.ObjectFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -14,9 +14,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.persistence.criteria.CriteriaBuilder;
+import javax.imageio.ImageIO;
 import javax.servlet.http.HttpSession;
 import javax.validation.Valid;
+import java.awt.image.BufferedImage;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -25,6 +26,7 @@ import java.security.NoSuchAlgorithmException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api")
@@ -55,13 +57,32 @@ public class ApiGeneralController {
     public Map<String, String> apiSettings() {
         HashMap<String, String> map = new HashMap<>();
         Iterable<GlobalSetting> globalSettings = globalSettingRepository.findAll();
-        globalSettings.forEach(globalSetting -> map.put(globalSetting.getCode(), String.valueOf(globalSetting.getValue().equals("YES"))));
+        globalSettings.forEach(globalSetting -> {
+            map.put(globalSetting.getCode(), String.valueOf(globalSetting.getValue().equals("YES")));
+            Main.globalSettings.put(globalSetting.getCode(),globalSetting.getValue());
+        });
         return map;
+    }
+
+    @PutMapping("/settings")
+    public void updatePost(@Valid @RequestBody JSONObject jsonObject) {
+        Map<String, Object> map = new HashMap<>(jsonObject);
+        User user = getAuthorizedUser();
+        if(user != null) {
+            if(user.getIsModerator() == 1) {
+                Iterable<GlobalSetting> globalSettings = globalSettingRepository.findAll();
+                globalSettings.forEach(gs -> {
+                    String value = map.get(gs.getCode()).toString();
+                    gs.setValue(value.equals("true") ? "YES" : "NO");
+                    Main.globalSettings.put(gs.getCode(),gs.getValue());
+                });
+                globalSettingRepository.saveAll(globalSettings);
+            }
+        }
     }
 
     @Autowired
     private PostRepository postRepository;
-
     @GetMapping("/calendar")
     public Map<String,Object> getCalendar() throws ParseException {
         Map<String, Object> returnMap = new HashMap<>();
@@ -95,19 +116,24 @@ public class ApiGeneralController {
     public Map<String, Object> getApiTag(){
         double postCount = (double) postRepository.countAllActivePosts();
         List<Map> response = new ArrayList<>();
-        List<Tag> tags = tagRepository.findAllTag();
-        Tag maxValueTag = tags.stream().max(Comparator.comparing(tag -> tag.getTag2Posts().size())).get();
-        double dWeightMax = 1/(maxValueTag.getTag2Posts().size()/postCount);
-        tags.forEach(tag -> {
-            Map<String,Object> mapForArray = new HashMap<>();
-            String name = tag.getName();
-            Double weight = tag.getTag2Posts().size()*dWeightMax/postCount;
-            mapForArray.put("name",name);
-            mapForArray.put("weight",weight);
-            response.add(mapForArray);
-        });
         Map<String, Object> map = new HashMap<>();
-        map.put("tags", response);
+        List<Tag> tags = tagRepository.findAllTag();
+        if(!tags.isEmpty()) {
+            Tag maxValueTag = tags.stream().max(Comparator.comparing(tag -> tag.getTag2Posts().size())).get();
+            double dWeightMax = 1 / (maxValueTag.getTag2Posts().size() / postCount);
+            tags.forEach(tag -> {
+                Map<String, Object> mapForArray = new HashMap<>();
+                String name = tag.getName();
+                Double weight = tag.getTag2Posts().size() * dWeightMax / postCount;
+                mapForArray.put("name", name);
+                mapForArray.put("weight", weight);
+                response.add(mapForArray);
+            });
+
+            map.put("tags", response);
+        }else{
+            map.put("tags", null);
+        }
         return map;
     }
 
@@ -199,6 +225,51 @@ public class ApiGeneralController {
         return changeProfile(name,email,password,"0",model.getPhoto());
     }
 
+    @GetMapping("/statistics/my")
+    public Map<String,Object> userStatistics() throws ParseException {
+        Map<String,Object> map = new HashMap<>();
+        SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        User user = getAuthorizedUser();
+        assert user != null;
+        List<Post> userPost = user.getPostsAuthor();
+        map.put("postsCount", userPost.size());
+        long likesCount = userPost.stream().mapToLong(post -> post.getPostsVote().stream().filter(p -> p.getValue().equals("1")).count()).sum();
+        long disLikesCount = userPost.stream().mapToLong(post -> post.getPostsVote().stream().filter(p -> p.getValue().equals("-1")).count()).sum();
+        long viewsCount = userPost.stream().mapToLong(Post::getViewCount).sum();
+        map.put("likesCount", likesCount);
+        map.put("dislikesCount", disLikesCount);
+        map.put("viewsCount", viewsCount);
+        String firstPost = postRepository.findFirstPostUser(user.getId());
+        Long firstPostTime = sdf.parse(firstPost).getTime()/1000;
+        map.put("firstPublication", firstPostTime);
+        return map;
+    }
+
+    @GetMapping("/statistics/all")
+    public ResponseEntity<Object> allStatistics() throws ParseException {
+        Map<String,Object> map = new HashMap<>();
+        SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
+        if(Main.globalSettings.get("STATISTICS_IS_PUBLIC").equals("NO")){
+            User user = getAuthorizedUser();
+            if (user == null) return new ResponseEntity<>(HttpStatus.valueOf(401));
+            if (user.getIsModerator() != 1) return new ResponseEntity<>(HttpStatus.valueOf(401));
+        }
+        List<Post> allPost = postRepository.getAllPost();
+        map.put("postsCount", allPost.size());
+
+        long likesCount = allPost.stream().mapToLong(post -> post.getPostsVote().stream().filter(p -> p.getValue().equals("1")).count()).sum();
+        long disLikesCount = allPost.stream().mapToLong(post -> post.getPostsVote().stream().filter(p -> p.getValue().equals("-1")).count()).sum();
+        long viewsCount = allPost.stream().mapToLong(Post::getViewCount).sum();
+        map.put("likesCount", likesCount);
+        map.put("dislikesCount", disLikesCount);
+        map.put("viewsCount", viewsCount);
+        String firstPost = postRepository.findFirstPost();
+        Long firstPostTime = sdf.parse(firstPost).getTime()/1000;
+        map.put("firstPublication", firstPostTime);
+        return new ResponseEntity<>(map, HttpStatus.OK);
+    }
+
     private String generateTripleFolder(){
         String letters = "abcdefghijklmnopqrstuvwxyz";
         String[] folder = new String[6];
@@ -275,9 +346,7 @@ public class ApiGeneralController {
                 Path path = Paths.get(tripleFolder);
                 Files.createDirectories(path);
                 File myFile = new File("/.." + tripleFolder + photo.getOriginalFilename());
-                FileOutputStream fos = new FileOutputStream(myFile);
-                fos.write(photo.getBytes());
-                fos.close();
+                resizeImageAndWrite(photo,myFile);
                 user.setPhoto(tripleFolder + photo.getOriginalFilename());
             }
             if (removePhoto != null) {
@@ -295,6 +364,22 @@ public class ApiGeneralController {
         map.put("result", true);
         userRepository.save(user);
         return map;
+    }
+    private void resizeImageAndWrite(MultipartFile photo,File newFile){
+        BufferedImage image = null;
+        try {
+            image = ImageIO.read(photo.getInputStream());
+            BufferedImage result = Scalr.resize(image, 36,36);
+            //BufferedImage result = new BufferedImage(36,36,image.getType());
+            String imageExtension = Objects.requireNonNull(photo.getOriginalFilename()).replaceAll(".+\\.","");
+            //Graphics2D g2 = result.createGraphics();
+            //g2.drawImage(image,0,0,36,36,null);
+            //g2.dispose();
+            ImageIO.write(result, imageExtension, newFile);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
     }
 
     private User getAuthorizedUser() {

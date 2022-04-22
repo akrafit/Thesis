@@ -18,12 +18,12 @@ public class CaptchaCode {
     @Column(nullable = false, columnDefinition = "TINYTEXT")
     private String code;
 
-    @Column(nullable = false, columnDefinition = "TINYTEXT")
-    private String secret_code;
+    @Column(name = "secret_code", nullable = false, columnDefinition = "TINYTEXT")
+    private String secretCode;
 
     public CaptchaCode(String secret, String captchaSecret, String time) {
         this.time = time;
         this.code = secret;
-        this.secret_code = captchaSecret;
+        this.secretCode = captchaSecret;
     }
 }
