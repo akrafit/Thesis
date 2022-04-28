@@ -1,0 +1,7 @@
+# Default ignored files
+/shelf/
+/target/
+/image.png
+/src/main/resources/static/
+/src/main/resources/templates/
+/.idea/

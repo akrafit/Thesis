@@ -8,11 +8,6 @@ spring:
     url: jdbc:mysql://localhost:3306/thesis_db?useUnicode=true&serverTimezone=UTC&useSSL=false
     username: root
     password: texttext
-  #datasource:
-  #  url: jdbc:mysql://ovz1.j71491578.pr46m.vps.myjino.ru:3308/comand_DB?useUnicode=true&serverTimezone=UTC&useSSL=false
-  #  username: xuser
-  #  password: gidadi69
-
   jpa:
     #show_sql: true
     hibernate:
