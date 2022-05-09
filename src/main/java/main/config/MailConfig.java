@@ -1,6 +1,5 @@
 package main.config;
 
-import main.controller.ApiInit;
 import main.service.MailParam;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -25,7 +24,6 @@ public class MailConfig {
 
         Properties properties = mailSender.getJavaMailProperties();
         properties.setProperty("mail.transport.protocol",mailParam.getProtocol());
-        //properties.setProperty("mail.debug", mailParam.getDebug());
         return mailSender;
 
     }

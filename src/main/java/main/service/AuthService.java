@@ -10,6 +10,7 @@ import main.repo.UserRepository;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.beans.factory.ObjectFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -27,7 +28,15 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 
 @Service
-public class UserService {
+public class AuthService {
+    @Value("${url.value}")
+    String url;
+    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    long oneHour = 3600000;
+    int secretCodeLength = 4;
+    boolean useLettersForSecretCode = true;
+    boolean useNumbersForSecretCode = false;
+
 
     private final ObjectFactory<HttpSession> httpSessionFactory;
     private final PostRepository postRepository;
@@ -35,14 +44,13 @@ public class UserService {
     private final UserRepository userRepository;
     private final MailSender mailSender;
 
-    public UserService(ObjectFactory<HttpSession> httpSessionFactory, PostRepository postRepository, CaptchaCodeRepository captchaCodeRepository, UserRepository userRepository, MailSender mailSender) {
+    public AuthService(ObjectFactory<HttpSession> httpSessionFactory, PostRepository postRepository, CaptchaCodeRepository captchaCodeRepository, UserRepository userRepository, MailSender mailSender) {
         this.httpSessionFactory = httpSessionFactory;
         this.postRepository = postRepository;
         this.captchaCodeRepository = captchaCodeRepository;
         this.userRepository = userRepository;
         this.mailSender = mailSender;
     }
-
 
     public Map<String, Object> getAuthUser() {
         HttpSession session = httpSessionFactory.getObject();
@@ -60,7 +68,6 @@ public class UserService {
     }
 
     public Map<String, Object> getCaptcha() throws IOException, ParseException, NoSuchAlgorithmException {
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         List<CaptchaCode> captchaCode = captchaCodeRepository.findAllCaptchaCode();
         long createdTime;
         if (!captchaCode.isEmpty()) {
@@ -69,7 +76,7 @@ public class UserService {
             createdTime = 0;
         }
         long difference = System.currentTimeMillis() - createdTime;
-        if (difference > 3600000) {
+        if (difference > oneHour) {
             captchaCodeRepository.deleteAll();
             for (int i = 0; i < 10; i++) {
                 String secret = generateSecretCode();
@@ -100,10 +107,7 @@ public class UserService {
     }
 
     private String generateSecretCode() {
-        int length = 4;
-        boolean useLetters = true;
-        boolean useNumbers = false;
-        return RandomStringUtils.random(length, useLetters, useNumbers);
+        return RandomStringUtils.random(secretCodeLength, useLettersForSecretCode, useNumbersForSecretCode);
     }
 
     public static String getHashCode(String password) throws NoSuchAlgorithmException {
@@ -151,12 +155,10 @@ public class UserService {
         if (!eMail.isEmpty() || !password.isEmpty()) {
             User user = userRepository.findByEmail(eMail.trim());
             String pass = getHashCode(password);
-            //System.out.println(pass);
-            if (Objects.equals(user.getPassword(), pass)) {
+            if (user != null && Objects.equals(user.getPassword(), pass)) {
                 map.put("result", true);
                 map.put("user", user.getUserForAuth(moderationCount));
                 Main.session.put(newSession, Math.toIntExact(user.getId()));
-                //System.out.println(Main.session.get(newSession));
             } else {
                 map.put("result", false);
             }
@@ -165,21 +167,26 @@ public class UserService {
     }
 
     public ResponseEntity<Map> registration(Map<String, Object> objectMap) throws NoSuchAlgorithmException {
-        String multiUserMode = Main.globalSettings.get("MULTIUSER_MODE");
-        if (multiUserMode.equals("YES")) {
+        Boolean multiUserMode = Main.globalSettings.get("MULTIUSER_MODE");
+        if (multiUserMode) {
             String eMail = objectMap.get("e_mail").toString();
             String password = objectMap.get("password").toString();
             String name = objectMap.get("name").toString();
             String captcha = objectMap.get("captcha").toString();
             String captcha_secret = objectMap.get("captcha_secret").toString();
             CaptchaCode captchaCode = captchaCodeRepository.findCaptchaCode(captcha);
-            SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
             String regTime = sdf.format(new Date());
             User user = userRepository.findByEmail(eMail);
             Map<String, Object> errors = new HashMap<>();
-            if (user != null) errors.put("email", "Этот e-mail уже зарегистрирован");
-            if (password.trim().length() < 6) errors.put("password", "Пароль короче 6-ти символов");
-            if (!checkText(name)) errors.put("name", "Имя указано неверно");
+            if (user != null) {
+                errors.put("email", "Этот e-mail уже зарегистрирован");
+            }
+            if (password.trim().length() < 6) {
+                errors.put("password", "Пароль короче 6-ти символов");
+            }
+            if (!checkText(name)){
+                errors.put("name", "Имя указано неверно");
+            }
             if (captchaCode != null) {
                 if (!captchaCode.getSecretCode().equals(captcha_secret))
                     errors.put("captcha", "Код с картинки введён неверно");
@@ -204,7 +211,7 @@ public class UserService {
             userRepository.save(user);
             String message = String.format(
                     "Приветствую, %s! \n" +
-                            "перейдите по ссылке для восстановления доступа http://localhost:8080/login/change-password/" + user.getCode(), user.getName(), user.getCode()
+                            "перейдите по ссылке для восстановления доступа "+ url +"/login/change-password/" + user.getCode(), user.getName(), user.getCode()
             );
             mailSender.send(user.getEmail(), "Activation code", message);
             map.put("result", true);
@@ -224,9 +231,12 @@ public class UserService {
         CaptchaCode captchaCode = captchaCodeRepository.findCaptchaCode(captcha);
         User user = userRepository.findByCode(code);
 
-        if (user == null)
+        if (user == null){
             errors.put("code", "Ссылка для восстановления пароля устарела.<a href=\"/auth/restore\">Запросить ссылку снова</a>");
-        if (password.trim().length() < 6) errors.put("password", "Пароль короче 6-ти символов");
+        }
+        if (password.trim().length() < 6){
+            errors.put("password", "Пароль короче 6-ти символов");
+        }
         if (captchaCode != null) {
             if (!captchaCode.getSecretCode().equals(captchaSecret))
                 errors.put("captcha", "Код с картинки введён неверно");

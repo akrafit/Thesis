@@ -1,4 +1,4 @@
-package main.controller;
+package main.config;
 
 import lombok.Data;
 import org.springframework.web.multipart.MultipartFile;

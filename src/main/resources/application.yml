@@ -1,3 +1,5 @@
+url:
+  value: http://localhost:8080
 spring:
   servlet:
     multipart:
