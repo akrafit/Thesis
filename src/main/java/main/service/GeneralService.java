@@ -97,17 +97,13 @@ public class GeneralService {
         Map<String, Object> posts = new HashMap<>();
         List<Object[]> countList = postRepository.countAllPostGroupByDay();
         for (Object[] ob : countList) {
-            String data = sdf.format(sdfFromMysql.parse(String.valueOf(ob[0])).getTime());
+            String data = ob[0].toString().substring(0,10);
             posts.put(data, ob[1]);
         }
         ArrayList<Integer> year = new ArrayList<>();
         List<String> yearBefore = postRepository.AllPostGroupByYear();
         yearBefore.forEach(s -> {
-            try {
-                year.add(Integer.valueOf(sdfYear.format(sdfFromMysql.parse(String.valueOf(s)).getTime())));
-            } catch (ParseException e) {
-                e.printStackTrace();
-            }
+            year.add(Integer.valueOf(s));
         });
         returnMap.put("years", year);
         returnMap.put("posts", posts);
@@ -187,7 +183,7 @@ public class GeneralService {
 
     public Map<String, Object> postModeration(Map<String, Object> objectMap) {
         Map<String, Object> map = new HashMap<>();
-        Long id = (Long) objectMap.get("post_id");
+        Long id = Long.parseLong(String.valueOf(objectMap.get("post_id")));
         String decision = objectMap.get("decision").toString();
         Post post = postRepository.getOne(id);
         User user = getAuthorizedUser();

@@ -308,7 +308,7 @@ public class PostService {
                 tag2Posts.add(tag2Post);
             });
             post.setTag2Posts(tag2Posts);
-            if (Main.globalSettings.get("POST_PREMODERATION").equals("NO")) {
+            if (Main.globalSettings.get("POST_PREMODERATION")) {
                 post.setModerationStatus(ModerationStatus.ACCEPTED);
             } else {
                 post.setModerationStatus(ModerationStatus.NEW);

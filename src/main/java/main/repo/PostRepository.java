@@ -30,11 +30,11 @@ public interface PostRepository extends PagingAndSortingRepository<Post,Long>, J
     int countAllPostIsModeration();
 
     @Query(value = "SELECT time, COUNT(id) FROM thesis_db.posts where posts.is_active = 1 and posts.moderation_status = 'ACCEPTED'" +
-            " group by DATE_FORMAT(time,'%Y-%m-%d')",
+            " group by time",
             nativeQuery = true)
     List<Object[]> countAllPostGroupByDay();
 
-    @Query(value = "SELECT time FROM thesis_db.posts group by DATE_FORMAT(time,'%Y')",
+    @Query(value = "SELECT DATE_FORMAT(time,'%Y') FROM thesis_db.posts GROUP BY DATE_FORMAT(time,'%Y')",
             nativeQuery = true)
     List<String> AllPostGroupByYear();
 

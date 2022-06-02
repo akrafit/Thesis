@@ -21,6 +21,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.text.ParseException;
@@ -88,7 +91,9 @@ public class AuthService {
         int random = (int) (Math.random() * 10);
         CaptchaCode captchaCodeRandom = captchaCodeRepository.findAllCaptchaCode().get(random);
         Map<String, Object> map = new HashMap<>();
-        OutputStream os = new FileOutputStream("image.png", false);
+        Path path = Paths.get("/../upload/");
+        Files.createDirectories(path);
+        OutputStream os = new FileOutputStream("/../upload/image.png", false);
         byte[] fileContent;
         String text = captchaCodeRandom.getCode();
         Cage cage = new Cage();
@@ -99,7 +104,7 @@ public class AuthService {
         } finally {
             os.close();
         }
-        fileContent = FileUtils.readFileToByteArray(new File("image.png"));
+        fileContent = FileUtils.readFileToByteArray(new File("/../upload/image.png"));
         String encodedString = Base64.getEncoder().encodeToString(fileContent);
         map.put("secret", captchaCodeRandom.getSecretCode());
         map.put("image", "data:image/png;base64, " + encodedString);
