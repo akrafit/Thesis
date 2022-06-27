@@ -26,6 +26,7 @@ import java.security.NoSuchAlgorithmException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Service
 public class GeneralService {
@@ -115,14 +116,34 @@ public class GeneralService {
         List<Map> response = new ArrayList<>();
         Map<String, Object> map = new HashMap<>();
         List<Tag> tags = tagRepository.findAllTag();
+        List<Tag> newTags = new ArrayList<>();
+        AtomicBoolean write = new AtomicBoolean(false);
         if (!tags.isEmpty()) {
-            Tag maxValueTag = tags.stream().max(Comparator.comparing(tag -> tag.getTag2Posts().size())).get();
-            double dWeightMax = 1 / (maxValueTag.getTag2Posts().size() / postCount);
+
             tags.forEach(tag -> {
+                tag.getTag2Posts().forEach(tag2Post -> {
+                    Post post = tag2Post.getPost();
+                    if (post.getModerationStatus().equals(ModerationStatus.ACCEPTED) && post.getIsActive() == 1){
+                        write.set(true);
+                    }
+                });
+                if(write.get()){
+                    newTags.add(tag);
+                    write.set(false);
+                }
+
+            });
+
+            Tag maxValueTag = newTags.stream().max(Comparator.comparing(tag -> tag.getTag2Posts().size())).get();
+            double dWeightMax = 1 / (maxValueTag.getTag2Posts().size() / postCount);
+            newTags.forEach(tag -> {
                 Map<String, Object> mapForArray = new HashMap<>();
                 String name = tag.getName();
                 Double weight = tag.getTag2Posts().size() * dWeightMax / postCount;
                 mapForArray.put("name", name);
+                if (weight < 0.30) {
+                    weight = 0.4;
+                }
                 mapForArray.put("weight", weight);
                 response.add(mapForArray);
             });
@@ -152,7 +173,11 @@ public class GeneralService {
     public Map<String, Object> addComment(Map<String, Object> objectMap) {
         Map<String, Object> map = new HashMap<>();
         Map<String, Object> errors = new HashMap<>();
-        int parentId = (int) objectMap.get("parent_id");
+        String pId = objectMap.get("parent_id").toString();
+        int parentId = 0;
+        if(pId != null){
+           parentId = Integer.parseInt(pId);
+        }
         Long postId = (Long) objectMap.get("post_id");
         String text = objectMap.get("text").toString();
         Post post = postRepository.getOne(postId);
@@ -211,17 +236,26 @@ public class GeneralService {
         User user = getAuthorizedUser();
         assert user != null;
         List<Post> userPost = user.getPostsAuthor();
-        map.put("postsCount", userPost.size());
-        long likesCount = userPost.stream().mapToLong(post -> post.getPostsVote().stream().filter(p -> p.getValue().equals("1")).count()).sum();
-        long disLikesCount = userPost.stream().mapToLong(post -> post.getPostsVote().stream().filter(p -> p.getValue().equals("-1")).count()).sum();
-        long viewsCount = userPost.stream().mapToLong(Post::getViewCount).sum();
-        map.put("likesCount", likesCount);
-        map.put("dislikesCount", disLikesCount);
-        map.put("viewsCount", viewsCount);
-        String firstPost = postRepository.findFirstPostUser(user.getId());
-        Long firstPostTime = sdfFromMysql.parse(firstPost).getTime() / 1000;
-        map.put("firstPublication", firstPostTime);
-        return map;
+        if(userPost.size() > 0) {
+            map.put("postsCount", userPost.size());
+            long likesCount = userPost.stream().mapToLong(post -> post.getPostsVote().stream().filter(p -> p.getValue().equals("1")).count()).sum();
+            long disLikesCount = userPost.stream().mapToLong(post -> post.getPostsVote().stream().filter(p -> p.getValue().equals("-1")).count()).sum();
+            long viewsCount = userPost.stream().mapToLong(Post::getViewCount).sum();
+            map.put("likesCount", likesCount);
+            map.put("dislikesCount", disLikesCount);
+            map.put("viewsCount", viewsCount);
+            String firstPost = postRepository.findFirstPostUser(user.getId());
+            Long firstPostTime = sdfFromMysql.parse(firstPost).getTime() / 1000;
+            map.put("firstPublication", firstPostTime);
+            return map;
+        }else{
+            map.put("postsCount", 0);
+            map.put("likesCount", 0);
+            map.put("dislikesCount", 0);
+            map.put("viewsCount", 0);
+            map.put("firstPublication", 0);
+            return map;
+        }
     }
 
     public ResponseEntity<Map> allStatistics() throws ParseException {

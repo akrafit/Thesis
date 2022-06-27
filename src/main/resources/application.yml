@@ -1,5 +1,5 @@
 url:
-  value: http://localhost:8080
+  value: http://185.178.46.24
 spring:
   servlet:
     multipart:
@@ -7,9 +7,9 @@ spring:
       max-request-size: 5MB
       enabled: true
   datasource:
-    url: jdbc:mysql://localhost:3306/thesis_db?useUnicode=true&serverTimezone=UTC&useSSL=false
+    url: jdbc:mysql://185.178.46.24:3306/thesis_db?useUnicode=true&serverTimezone=UTC&useSSL=false
     username: root
-    password: texttext
+    password: 69gidadi
   jpa:
     #show_sql: true
     hibernate:
@@ -17,7 +17,7 @@ spring:
   mail:
     host: smtp.yandex.ru
     username: miaki24@yandex.ru
-    password: xptdprhcrynedguv
+    password: f
     port: 465
     protocol: smtps
     debug: true

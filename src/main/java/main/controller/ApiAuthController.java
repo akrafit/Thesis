@@ -47,7 +47,12 @@ public class ApiAuthController {
     @PostMapping("/register")
     public @ResponseBody
     ResponseEntity<Map> registration(@Valid @RequestBody JSONObject jsonObject) throws NoSuchAlgorithmException {
-        Map<String, Object> map = new HashMap<>(jsonObject);
+        Map<String, Object> map = new HashMap<>();
+        map.put("e_mail",jsonObject.get("e_mail"));
+        map.put("password",jsonObject.get("password"));
+        map.put("name",jsonObject.get("name"));
+        map.put("captcha",jsonObject.get("captcha"));
+        map.put("captcha_secret",jsonObject.get("captcha_secret"));
         return authService.registration(map);
     }
 

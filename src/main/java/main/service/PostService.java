@@ -7,6 +7,7 @@ import main.model.*;
 import main.model.enums.ModerationStatus;
 import main.repo.*;
 import main.specification.PostSpecification;
+import org.jsoup.Jsoup;
 import org.springframework.beans.factory.ObjectFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -460,7 +461,7 @@ public class PostService {
         map.put("timestamp", sdf.parse(post.getTime()).getTime() / 1000);
         map.put("user", post.getUser().getUserShortMap());
         map.put("title", post.getTitle());
-        map.put("announce", post.getText().replaceAll("<.*?>", ""));
+        map.put("announce", Jsoup.parse(post.getText()).text());
         long likeCount = post.getPostsVote().stream().filter(p -> p.getValue().equals("1")).count();
         map.put("likeCount", likeCount);
         long disLikeCount = post.getPostsVote().stream().filter(p -> p.getValue().equals("-1")).count();

@@ -30,6 +30,8 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
+import static main.Main.globalSettings;
+
 @Service
 public class AuthService {
     @Value("${url.value}")
@@ -172,8 +174,10 @@ public class AuthService {
     }
 
     public ResponseEntity<Map> registration(Map<String, Object> objectMap) throws NoSuchAlgorithmException {
-        Boolean multiUserMode = Main.globalSettings.get("MULTIUSER_MODE");
-        if (multiUserMode) {
+        //System.out.println(globalSettings);
+        Boolean multiUserMode = globalSettings.get("MULTIUSER_MODE");
+        //System.out.println(multiUserMode);
+        if (multiUserMode != null) {
             String eMail = objectMap.get("e_mail").toString();
             String password = objectMap.get("password").toString();
             String name = objectMap.get("name").toString();
@@ -201,8 +205,13 @@ public class AuthService {
             if (errors.isEmpty()) {
                 errors.put("result", true);
                 userRepository.save(new User(eMail, getHashCode(password), name, regTime));
+                return new ResponseEntity<>(errors, HttpStatus.OK);
             }
-            return new ResponseEntity<>(errors, HttpStatus.OK);
+            Map<String, Object> map = new HashMap<>();
+            map.put("result", false);
+            map.put("errors", errors);
+
+            return new ResponseEntity<>(map, HttpStatus.OK);
         } else {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }

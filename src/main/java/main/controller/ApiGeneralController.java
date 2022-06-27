@@ -60,7 +60,11 @@ public class ApiGeneralController {
 
     @PostMapping("/comment")
     public Map<String, Object> addComment(@Valid @RequestBody JSONObject jsonObject) {
-        Map<String, Object> map = new HashMap<>(jsonObject);
+        Map<String, Object> map = new HashMap<>();
+        map.put("parent_id",jsonObject.getLong("parent_id") != null ? jsonObject.getLong("parent_id") : 0);
+        map.put("post_id",jsonObject.getLong("post_id"));
+        map.put("text",jsonObject.get("text"));
+
         return generalService.addComment(map);
     }
 

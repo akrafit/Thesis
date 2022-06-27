@@ -12,6 +12,7 @@ public class Main {
     public static Map<String, Boolean> globalSettings = new HashMap<>();
 
     public static void main(String[] args) {
+
         SpringApplication.run(Main.class, args);
     }
 }
