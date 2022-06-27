@@ -1,5 +1,5 @@
 url:
-  value: http://185.178.46.24
+  value: http:// 
 spring:
   servlet:
     multipart:
