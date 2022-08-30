@@ -31,6 +31,52 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Service
 public class GeneralService {
 
+    @Value("${spring.servlet.multipart.max-file-size}")
+    String maxFileSize;
+    public static final String POSTS_COUNT = "postsCount";
+    public static final String LIKES_COUNT = "likesCount";
+    public static final String DISLIKES_COUNT = "dislikesCount";
+    public static final String VIEWS_COUNT = "viewsCount";
+    public static final String FIRST_PUBLICATION = "firstPublication";
+    public static final String STATISTICS_IS_PUBLIC = "STATISTICS_IS_PUBLIC";
+    public static final String LETTERS = "abcdefghijklmnopqrstuvwxyz";
+    public static final String SHORT_PASSWORD = "Пароль короче 6-ти символов";
+    public static final String UPLOAD_USER = "/upload/user/";
+    public static final String NO_AUTH = "Пользователь не авторизован";
+    public static final String BUSY = "Этот e-mail уже зарегистрирован";
+    public static final String IMAGE = "image";
+    public static final String NOT_VALID = "Не допустимое расширение";
+    public static final String LARGE_IMAGE = "Размер файла превышает допустимый размер";
+    public static final String NOT_AUTH = "Пользователь не авторизован";
+    public static final String YEARS = "years";
+    public static final String POSTS = "posts";
+    public static final String NAME = "name";
+    public static final String TAGS = "tags";
+    public static final String TITLE_ERROR = "Заголовок не установлен";
+    public static final String SHORT_COMMENT = "Текст комментария не задан или слишком короткий";
+    private final static String WEIGHT = "weight";
+    public static final String UPLOAD = "/upload/";
+    public static final String PARENT_ID = "parent_id";
+    public static final String POST_ID = "post_id";
+    public static final String TEXT = "text";
+    public static final String AUTH = "Пользователь не авторизован";
+    private final static String RESULT = "result";
+    private final static String PASSWORD = "password";
+    private final static String ERRORS = "errors";
+    public static final String ID = "id";
+    public static final String DECISION = "decision";
+    public static final String ACCEPT = "accept";
+    public static final String DECLINE = "decline";
+    private final static SimpleDateFormat SIMPLE_DATE_FORMAT = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    private final static String YES = "YES";
+    private final static String NO = "NO";
+    private final static String TITLE = "title";
+    private final static String SUBTITLE = "subtitle";
+    private final static String PHONE = "phone";
+    private final static String EMAIL = "email";
+    private final static String COPYRIGHT = "copyright";
+    private final static String COPYRIGHT_FORM = "copyrightFrom";
+
     private static ApiInit apiInit;
     private final GlobalSettingRepository globalSettingRepository;
     private final ObjectFactory<HttpSession> httpSessionFactory;
@@ -38,13 +84,6 @@ public class GeneralService {
     private final PostRepository postRepository;
     private final TagRepository tagRepository;
     private final PostCommentRepository postCommentRepository;
-
-    @Value("${spring.servlet.multipart.max-file-size}")
-    String maxFileSize;
-    SimpleDateFormat sdfFromMysql = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-    SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd");
-    SimpleDateFormat sdfYear = new java.text.SimpleDateFormat("yyyy");
-
 
     public GeneralService(ApiInit apiInit, GlobalSettingRepository globalSettingRepository, ObjectFactory<HttpSession> httpSessionFactory, UserRepository userRepository, PostRepository postRepository, TagRepository tagRepository, PostCommentRepository postCommentRepository) {
         this.apiInit = apiInit;
@@ -59,12 +98,12 @@ public class GeneralService {
 
     public Map<String, String> apiInit() {
         HashMap<String, String> map = new HashMap<>();
-        map.put("title", apiInit.getTitle());
-        map.put("subtitle", apiInit.getSubtitle());
-        map.put("phone", apiInit.getPhone());
-        map.put("email", apiInit.getEmail());
-        map.put("copyright", apiInit.getCopyright());
-        map.put("copyrightFrom", apiInit.getCopyrightFrom());
+        map.put(TITLE, apiInit.getTitle());
+        map.put(SUBTITLE, apiInit.getSubtitle());
+        map.put(PHONE, apiInit.getPhone());
+        map.put(EMAIL, apiInit.getEmail());
+        map.put(COPYRIGHT, apiInit.getCopyright());
+        map.put(COPYRIGHT_FORM, apiInit.getCopyrightFrom());
         return map;
     }
 
@@ -72,8 +111,8 @@ public class GeneralService {
         HashMap<String, Boolean> map = new HashMap<>();
         Iterable<GlobalSetting> globalSettings = globalSettingRepository.findAll();
         globalSettings.forEach(globalSetting -> {
-            map.put(globalSetting.getCode(), globalSetting.getValue().equals("YES"));
-            Main.globalSettings.put(globalSetting.getCode(), globalSetting.getValue().equals("YES"));
+            map.put(globalSetting.getCode(), globalSetting.getValue().equals(YES));
+            Main.globalSettings.put(globalSetting.getCode(), globalSetting.getValue().equals(YES));
         });
         return map;
     }
@@ -85,7 +124,7 @@ public class GeneralService {
                 Iterable<GlobalSetting> globalSettings = globalSettingRepository.findAll();
                 globalSettings.forEach(gs -> {
                     Boolean value = (Boolean) map.get(gs.getCode());
-                    gs.setValue(value ? "YES" : "NO");
+                    gs.setValue(value ? YES : NO);
                     Main.globalSettings.put(gs.getCode(), value);
                 });
                 globalSettingRepository.saveAll(globalSettings);
@@ -106,8 +145,8 @@ public class GeneralService {
         yearBefore.forEach(s -> {
             year.add(Integer.valueOf(s));
         });
-        returnMap.put("years", year);
-        returnMap.put("posts", posts);
+        returnMap.put(YEARS, year);
+        returnMap.put(POSTS, posts);
         return returnMap;
     }
 
@@ -140,16 +179,16 @@ public class GeneralService {
                 Map<String, Object> mapForArray = new HashMap<>();
                 String name = tag.getName();
                 Double weight = tag.getTag2Posts().size() * dWeightMax / postCount;
-                mapForArray.put("name", name);
+                mapForArray.put(NAME, name);
                 if (weight < 0.30) {
                     weight = 0.4;
                 }
-                mapForArray.put("weight", weight);
+                mapForArray.put(WEIGHT, weight);
                 response.add(mapForArray);
             });
-            map.put("tags", response);
+            map.put(TAGS, response);
         } else {
-            map.put("tags", null);
+            map.put(TAGS, null);
         }
         return map;
     }
@@ -160,7 +199,7 @@ public class GeneralService {
         if (!checkedImage.isEmpty()) {
             return new ResponseEntity<>(checkedImage, HttpStatus.BAD_REQUEST);
         }
-        String tripleFolder = "/upload/" + generateTripleFolder();
+        String tripleFolder = UPLOAD + generateTripleFolder();
         Path path = Paths.get(tripleFolder);
         Files.createDirectories(path);
         File myFile = new File("/.." + tripleFolder + image.getOriginalFilename());
@@ -173,61 +212,62 @@ public class GeneralService {
     public Map<String, Object> addComment(Map<String, Object> objectMap) {
         Map<String, Object> map = new HashMap<>();
         Map<String, Object> errors = new HashMap<>();
-        String pId = objectMap.get("parent_id").toString();
+        String pId = objectMap.get(PARENT_ID).toString();
         int parentId = 0;
         if(pId != null){
            parentId = Integer.parseInt(pId);
         }
-        Long postId = (Long) objectMap.get("post_id");
-        String text = objectMap.get("text").toString();
+        Long postId = (Long) objectMap.get(POST_ID);
+        String text = objectMap.get(TEXT).toString();
         Post post = postRepository.getOne(postId);
         User user = getAuthorizedUser();
         String cleanText = text.replaceAll("<.*?>", "");
         if (user == null){
-            errors.put("text", "Пользователь не авторизован");
+            errors.put(TEXT, AUTH);
         }
         if (cleanText.isEmpty()){
-            errors.put("text", "Заголовок не установлен");
+            errors.put(TEXT, TITLE_ERROR);
         }
         if (cleanText.length() < 3){
-            errors.put("text", "Текст комментария не задан или слишком короткий");
+            errors.put(TEXT, SHORT_COMMENT);
         }
+
         if (!errors.isEmpty()) {
-            map.put("result", false);
-            map.put("errors", errors);
+            map.put(RESULT, false);
+            map.put(ERRORS, errors);
             return map;
         }
-        PostComment postComment = new PostComment(sdfFromMysql.format(System.currentTimeMillis()), text, post, user);
+        PostComment postComment = new PostComment(SIMPLE_DATE_FORMAT.format(System.currentTimeMillis()), text, post, user);
         if (parentId > 0){
             postComment.setParentId(parentId);
         }
         postCommentRepository.save(postComment);
-        map.put("id", postComment.getId());
+        map.put(ID, postComment.getId());
         return map;
     }
 
     public Map<String, Object> postModeration(Map<String, Object> objectMap) {
         Map<String, Object> map = new HashMap<>();
-        Long id = Long.parseLong(String.valueOf(objectMap.get("post_id")));
-        String decision = objectMap.get("decision").toString();
+        Long id = Long.parseLong(String.valueOf(objectMap.get(POST_ID)));
+        String decision = objectMap.get(DECISION).toString();
         Post post = postRepository.getOne(id);
         User user = getAuthorizedUser();
         assert user != null;
         assert post != null;
         if (user.getIsModerator() == 1) {
             post.setModeratorId(user.getId());
-            if (decision.equals("accept")) {
+            if (decision.equals(ACCEPT)) {
                 post.setModerationStatus(ModerationStatus.ACCEPTED);
             }
-            if (decision.equals("decline")) {
+            if (decision.equals(DECLINE)) {
                 post.setModerationStatus(ModerationStatus.DECLINED);
             }
         } else {
-            map.put("result", false);
+            map.put(RESULT, false);
             return map;
         }
         postRepository.save(post);
-        map.put("result", true);
+        map.put(RESULT, true);
         return map;
     }
 
@@ -237,51 +277,51 @@ public class GeneralService {
         assert user != null;
         List<Post> userPost = user.getPostsAuthor();
         if(userPost.size() > 0) {
-            map.put("postsCount", userPost.size());
+            map.put(POSTS_COUNT, userPost.size());
             long likesCount = userPost.stream().mapToLong(post -> post.getPostsVote().stream().filter(p -> p.getValue().equals("1")).count()).sum();
             long disLikesCount = userPost.stream().mapToLong(post -> post.getPostsVote().stream().filter(p -> p.getValue().equals("-1")).count()).sum();
             long viewsCount = userPost.stream().mapToLong(Post::getViewCount).sum();
-            map.put("likesCount", likesCount);
-            map.put("dislikesCount", disLikesCount);
-            map.put("viewsCount", viewsCount);
+            map.put(LIKES_COUNT, likesCount);
+            map.put(DISLIKES_COUNT, disLikesCount);
+            map.put(VIEWS_COUNT, viewsCount);
             String firstPost = postRepository.findFirstPostUser(user.getId());
-            Long firstPostTime = sdfFromMysql.parse(firstPost).getTime() / 1000;
-            map.put("firstPublication", firstPostTime);
+            Long firstPostTime = SIMPLE_DATE_FORMAT.parse(firstPost).getTime() / 1000;
+            map.put(FIRST_PUBLICATION, firstPostTime);
             return map;
         }else{
-            map.put("postsCount", 0);
-            map.put("likesCount", 0);
-            map.put("dislikesCount", 0);
-            map.put("viewsCount", 0);
-            map.put("firstPublication", 0);
+            map.put(POSTS_COUNT, 0);
+            map.put(LIKES_COUNT, 0);
+            map.put(DISLIKES_COUNT, 0);
+            map.put(VIEWS_COUNT, 0);
+            map.put(FIRST_PUBLICATION, 0);
             return map;
         }
     }
 
     public ResponseEntity<Map> allStatistics() throws ParseException {
         Map<String, Object> map = new HashMap<>();
-        if (!Main.globalSettings.get("STATISTICS_IS_PUBLIC")) {
+        if (!Main.globalSettings.get(STATISTICS_IS_PUBLIC)) {
             User user = getAuthorizedUser();
             if (user == null) return new ResponseEntity<>(HttpStatus.valueOf(401));
             if (user.getIsModerator() != 1) return new ResponseEntity<>(HttpStatus.valueOf(401));
         }
         List<Post> allPost = postRepository.getAllPost();
-        map.put("postsCount", allPost.size());
+        map.put(POSTS_COUNT, allPost.size());
         long likesCount = allPost.stream().mapToLong(post -> post.getPostsVote().stream().filter(p -> p.getValue().equals("1")).count()).sum();
         long disLikesCount = allPost.stream().mapToLong(post -> post.getPostsVote().stream().filter(p -> p.getValue().equals("-1")).count()).sum();
         long viewsCount = allPost.stream().mapToLong(Post::getViewCount).sum();
-        map.put("likesCount", likesCount);
-        map.put("dislikesCount", disLikesCount);
-        map.put("viewsCount", viewsCount);
+        map.put(LIKES_COUNT, likesCount);
+        map.put(DISLIKES_COUNT, disLikesCount);
+        map.put(VIEWS_COUNT, viewsCount);
         String firstPost = postRepository.findFirstPost();
-        Long firstPostTime = sdfFromMysql.parse(firstPost).getTime() / 1000;
-        map.put("firstPublication", firstPostTime);
+        Long firstPostTime = SIMPLE_DATE_FORMAT.parse(firstPost).getTime() / 1000;
+        map.put(FIRST_PUBLICATION, firstPostTime);
         return new ResponseEntity<>(map, HttpStatus.OK);
     }
 
 
     private String generateTripleFolder() {
-        String letters = "abcdefghijklmnopqrstuvwxyz";
+        String letters = LETTERS;
         String[] folder = new String[6];
         for (int i = 0; i < 6; i++) {
             Random random = new Random();
@@ -312,7 +352,7 @@ public class GeneralService {
             }
             if (password != null) {
                 if (password.trim().length() < 6) {
-                    errors.put("password", "Пароль короче 6-ти символов");
+                    errors.put(PASSWORD, SHORT_PASSWORD);
                 } else {
                     user.setPassword(AuthService.getHashCode(password));
                 }
@@ -322,7 +362,7 @@ public class GeneralService {
                 if (!checkedImage.isEmpty()) {
                     return checkedImage;
                 }
-                String tripleFolder = "/upload/user/" + user.getId().toString() + "/";
+                String tripleFolder = UPLOAD_USER + user.getId().toString() + "/";
                 Path path = Paths.get(tripleFolder);
                 Files.createDirectories(path);
                 File myFile = new File("/.." + tripleFolder + photo.getOriginalFilename());
@@ -333,15 +373,15 @@ public class GeneralService {
                 if (removePhoto.equals("1")) user.setPhoto("");
             }
         } else {
-            errors.put("email", "Пользователь не авторизован");
+            errors.put(EMAIL, NO_AUTH);
         }
-        if (userControl != null) errors.put("email", "Этот e-mail уже зарегистрирован");
+        if (userControl != null) errors.put(EMAIL, BUSY);
         if (!errors.isEmpty()) {
-            map.put("result", false);
-            map.put("errors", errors);
+            map.put(RESULT, false);
+            map.put(ERRORS, errors);
             return map;
         }
-        map.put("result", true);
+        map.put(RESULT, true);
         userRepository.save(user);
         return map;
     }
@@ -371,19 +411,19 @@ public class GeneralService {
             case ("png"):
                 break;
             default:
-                errors.put("image", "Не допустимое расширение");
+                errors.put(IMAGE, NOT_VALID);
                 break;
         }
         if (imageSize > maxImageSize) {
-            errors.put("image", "Размер файла превышает допустимый размер");
+            errors.put(IMAGE, LARGE_IMAGE);
         }
 
         if (user == null) {
-            errors.put("image", "Пользователь не авторизован");
+            errors.put(IMAGE, NOT_AUTH);
         }
         if (!errors.isEmpty()) {
-            map.put("result", false);
-            map.put("errors", errors);
+            map.put(RESULT, false);
+            map.put(ERRORS, errors);
         }
         return map;
     }

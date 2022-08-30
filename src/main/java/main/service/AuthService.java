@@ -36,11 +36,21 @@ import static main.Main.globalSettings;
 public class AuthService {
     @Value("${url.value}")
     String url;
-    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-    long oneHour = 3600000;
-    int secretCodeLength = 4;
-    boolean useLettersForSecretCode = true;
-    boolean useNumbersForSecretCode = false;
+    private final static SimpleDateFormat SIMPLE_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    private final static long ONE_HOUR = 3600000;
+    private final static int SECRET_CODE_LENGTH = 4;
+    private final static boolean USE_LETTERS_FOR_SECRET_CODE = true;
+    private final static boolean USE_NUMBERS_FOR_SECRET_CODE = false;
+    private final static String UPLOAD = "/../upload/";
+    private final static String UPLOAD_IMAGE_PNG = "/../upload/image.png";
+    private final static String SECRET = "secret";
+    private final static String IMAGE = "image";
+    private final static String DATA_IMAGE_PNG_BASE_64 = "data:image/png;base64, ";
+    private final static String RESULT = "result";
+    private final static String USER = "user";
+    private final static String E_MAIL = "e_mail";
+    private final static String PASSWORD = "password";
+    private final static String ERRORS = "errors";
 
 
     private final ObjectFactory<HttpSession> httpSessionFactory;
@@ -64,10 +74,10 @@ public class AuthService {
         if (Main.session.containsValue(session.getId())) {
             Integer authorizedUserID = Main.session.get(session);
             User user = userRepository.getOne(Long.valueOf(authorizedUserID));
-            map.put("result", true);
-            map.put("user", user.getUserForAuth(moderationCount));
+            map.put(RESULT, true);
+            map.put(USER, user.getUserForAuth(moderationCount));
         } else {
-            map.put("result", false);
+            map.put(RESULT, false);
         }
         return map;
     }
@@ -76,26 +86,26 @@ public class AuthService {
         List<CaptchaCode> captchaCode = captchaCodeRepository.findAllCaptchaCode();
         long createdTime;
         if (!captchaCode.isEmpty()) {
-            createdTime = sdf.parse(captchaCode.get(0).getTime()).getTime();
+            createdTime = SIMPLE_DATE_FORMAT.parse(captchaCode.get(0).getTime()).getTime();
         } else {
             createdTime = 0;
         }
         long difference = System.currentTimeMillis() - createdTime;
-        if (difference > oneHour) {
+        if (difference > ONE_HOUR) {
             captchaCodeRepository.deleteAll();
             for (int i = 0; i < 10; i++) {
                 String secret = generateSecretCode();
                 String captchaSecret = getHashCode(secret);
-                String time = sdf.format(new Date());
+                String time = SIMPLE_DATE_FORMAT.format(new Date());
                 captchaCodeRepository.save(new CaptchaCode(secret, captchaSecret, time));
             }
         }
         int random = (int) (Math.random() * 10);
         CaptchaCode captchaCodeRandom = captchaCodeRepository.findAllCaptchaCode().get(random);
         Map<String, Object> map = new HashMap<>();
-        Path path = Paths.get("/../upload/");
+        Path path = Paths.get(UPLOAD);
         Files.createDirectories(path);
-        OutputStream os = new FileOutputStream("/../upload/image.png", false);
+        OutputStream os = new FileOutputStream(UPLOAD_IMAGE_PNG, false);
         byte[] fileContent;
         String text = captchaCodeRandom.getCode();
         Cage cage = new Cage();
@@ -106,15 +116,15 @@ public class AuthService {
         } finally {
             os.close();
         }
-        fileContent = FileUtils.readFileToByteArray(new File("/../upload/image.png"));
+        fileContent = FileUtils.readFileToByteArray(new File(UPLOAD_IMAGE_PNG));
         String encodedString = Base64.getEncoder().encodeToString(fileContent);
-        map.put("secret", captchaCodeRandom.getSecretCode());
-        map.put("image", "data:image/png;base64, " + encodedString);
+        map.put(SECRET, captchaCodeRandom.getSecretCode());
+        map.put(IMAGE, DATA_IMAGE_PNG_BASE_64 + encodedString);
         return map;
     }
 
     private String generateSecretCode() {
-        return RandomStringUtils.random(secretCodeLength, useLettersForSecretCode, useNumbersForSecretCode);
+        return RandomStringUtils.random(SECRET_CODE_LENGTH, USE_LETTERS_FOR_SECRET_CODE, USE_NUMBERS_FOR_SECRET_CODE);
     }
 
     public static String getHashCode(String password) throws NoSuchAlgorithmException {
@@ -149,42 +159,40 @@ public class AuthService {
                 Main.session.remove(session);
             }
         }
-        map.put("result", true);
+        map.put(RESULT, true);
         return map;
     }
 
     public Map<String, Object> auth(Map<String, Object> objectMap) throws NoSuchAlgorithmException {
         String newSession = httpSessionFactory.getObject().getId();
-        String eMail = objectMap.get("e_mail").toString();
-        String password = objectMap.get("password").toString();
+        String eMail = objectMap.get(E_MAIL).toString();
+        String password = objectMap.get(PASSWORD).toString();
         Map<String, Object> map = new HashMap<>();
         int moderationCount = postRepository.countAllPostIsModeration();
         if (!eMail.isEmpty() || !password.isEmpty()) {
             User user = userRepository.findByEmail(eMail.trim());
             String pass = getHashCode(password);
             if (user != null && Objects.equals(user.getPassword(), pass)) {
-                map.put("result", true);
-                map.put("user", user.getUserForAuth(moderationCount));
+                map.put(RESULT, true);
+                map.put(USER, user.getUserForAuth(moderationCount));
                 Main.session.put(newSession, Math.toIntExact(user.getId()));
             } else {
-                map.put("result", false);
+                map.put(RESULT, false);
             }
         }
         return map;
     }
 
     public ResponseEntity<Map> registration(Map<String, Object> objectMap) throws NoSuchAlgorithmException {
-        //System.out.println(globalSettings);
         Boolean multiUserMode = globalSettings.get("MULTIUSER_MODE");
-        //System.out.println(multiUserMode);
         if (multiUserMode != null) {
-            String eMail = objectMap.get("e_mail").toString();
-            String password = objectMap.get("password").toString();
+            String eMail = objectMap.get(E_MAIL).toString();
+            String password = objectMap.get(PASSWORD).toString();
             String name = objectMap.get("name").toString();
             String captcha = objectMap.get("captcha").toString();
             String captcha_secret = objectMap.get("captcha_secret").toString();
             CaptchaCode captchaCode = captchaCodeRepository.findCaptchaCode(captcha);
-            String regTime = sdf.format(new Date());
+            String regTime = SIMPLE_DATE_FORMAT.format(new Date());
             User user = userRepository.findByEmail(eMail);
             Map<String, Object> errors = new HashMap<>();
             if (user != null) {
@@ -203,13 +211,13 @@ public class AuthService {
                 errors.put("captcha", "Код с картинки введён неверно");
             }
             if (errors.isEmpty()) {
-                errors.put("result", true);
+                errors.put(RESULT, true);
                 userRepository.save(new User(eMail, getHashCode(password), name, regTime));
                 return new ResponseEntity<>(errors, HttpStatus.OK);
             }
             Map<String, Object> map = new HashMap<>();
-            map.put("result", false);
-            map.put("errors", errors);
+            map.put(RESULT, false);
+            map.put(ERRORS, errors);
 
             return new ResponseEntity<>(map, HttpStatus.OK);
         } else {
@@ -228,9 +236,9 @@ public class AuthService {
                             "перейдите по ссылке для восстановления доступа "+ url +"/login/change-password/" + user.getCode(), user.getName(), user.getCode()
             );
             mailSender.send(user.getEmail(), "Activation code", message);
-            map.put("result", true);
+            map.put(RESULT, true);
         } else {
-            map.put("result", false);
+            map.put(RESULT, false);
         }
         return map;
     }
@@ -239,7 +247,7 @@ public class AuthService {
         Map<String, Object> map = new HashMap<>();
         Map<String, Object> errors = new HashMap<>();
         String code = objectMap.get("code").toString();
-        String password = objectMap.get("password").toString();
+        String password = objectMap.get(PASSWORD).toString();
         String captcha = objectMap.get("captcha").toString();
         String captchaSecret = objectMap.get("captcha_secret").toString();
         CaptchaCode captchaCode = captchaCodeRepository.findCaptchaCode(captcha);
@@ -258,13 +266,13 @@ public class AuthService {
             errors.put("captcha", "Код с картинки введён неверно");
         }
         if (errors.isEmpty()) {
-            map.put("result", true);
+            map.put(RESULT, true);
             assert user != null;
             user.setPassword(getHashCode(password));
             userRepository.save(user);
         } else {
-            map.put("result", false);
-            map.put("errors", errors);
+            map.put(RESULT, false);
+            map.put(ERRORS, errors);
         }
         return map;
     }

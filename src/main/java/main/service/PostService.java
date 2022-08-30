@@ -26,6 +26,37 @@ import java.util.*;
 
 @Service
 public class PostService {
+    public static final String POPULAR = "popular";
+    public static final String BEST = "best";
+    public static final String EARLY = "early";
+    public static final String TIME = "time";
+    public static final String COUNT = "count";
+    public static final String POSTS = "posts";
+    public static final String INACTIVE = "inactive";
+    public static final String PENDING = "pending";
+    public static final String DECLINED = "declined";
+    public static final String ACCEPTED = "accepted";
+    public static final String TIMESTAMP = "timestamp";
+    public static final String ACTIVE = "active";
+    public static final String TITLE = "title";
+    public static final String TAGS = "tags";
+    public static final String TEXT = "text";
+    public static final String NOT_AUTH = "Пользователь не авторизован";
+    public static final String TITLE_NOT_INSTALLED = "Заголовок не установлен";
+    public static final String TITLE_IS_SHORT = "Заголовок публикации слишком короткий";
+    public static final String TEXT_IS_SHORT = "Текст публикации слишком короткий";
+    public static final String POST_PREMODERATION = "POST_PREMODERATION";
+    public static final String RESULT = "result";
+    public static final String ERRORS = "errors";
+    public static final String POST_ID = "post_id";
+    public static final String ID = "id";
+    public static final String USER = "user";
+    public static final String LIKE_COUNT = "likeCount";
+    public static final String DISLIKE_COUNT = "dislikeCount";
+    public static final String VIEW_COUNT = "viewCount";
+    public static final String COMMENTS = "comments";
+    public static final String ANNOUNCE = "announce";
+    public static final String COMMENT_COUNT = "commentCount";
     private int offsetInt;
     private int limitInt;
     private final PostRepository postRepository;
@@ -34,8 +65,8 @@ public class PostService {
     private final Tag2PostRepository tag2PostRepository;
     private final PostVoteRepository postVoteRepository;
     final ObjectFactory<HttpSession> httpSessionFactory;
-    static SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-    static SimpleDateFormat shortSdf = new java.text.SimpleDateFormat("yyyy-MM-dd");
+    private final static SimpleDateFormat SIMPLE_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    private final static SimpleDateFormat DATE_FORMAT = new java.text.SimpleDateFormat("yyyy-MM-dd");
 
     public PostService(PostRepository postRepository, UserRepository userRepository, TagRepository tagRepository, Tag2PostRepository tag2PostRepository, PostVoteRepository postVoteRepository, ObjectFactory<HttpSession> httpSessionFactory) {
         this.postRepository = postRepository;
@@ -50,20 +81,20 @@ public class PostService {
         Page<Post> page;
         checkOffsetAndLimit(offset, limit);
         switch (mode) {
-            case ("popular"):
+            case (POPULAR):
                 Pageable popular = PageRequest.of(offsetInt, limitInt);
                 page = postRepository.findPostsWithPagination(popular);
                 break;
-            case ("best"):
+            case BEST:
                 Pageable best = PageRequest.of(offsetInt, limitInt);
                 page = postRepository.findPostsWithPaginationBest(best);
                 break;
-            case ("early"):
-                Pageable early = PageRequest.of(offsetInt, limitInt, Sort.Direction.ASC, "time");
+            case (EARLY):
+                Pageable early = PageRequest.of(offsetInt, limitInt, Sort.Direction.ASC, TIME);
                 page = postRepository.findByIsActiveAndModerationStatus(1, ModerationStatus.ACCEPTED, early);
                 break;
             default:
-                Pageable pageable = PageRequest.of(offsetInt, limitInt, Sort.Direction.DESC, "time");
+                Pageable pageable = PageRequest.of(offsetInt, limitInt, Sort.Direction.DESC, TIME);
                 page = postRepository.findByIsActiveAndModerationStatus(1, ModerationStatus.ACCEPTED, pageable);
                 break;
         }
@@ -125,12 +156,12 @@ public class PostService {
                     }
                 });
             }
-            map.put("count", postCount);
-            map.put("posts", arrayList);
+            map.put(COUNT, postCount);
+            map.put(POSTS, arrayList);
 
         } else {
-            map.put("count", 0);
-            map.put("posts", new ArrayList());
+            map.put(COUNT, 0);
+            map.put(POSTS, new ArrayList());
         }
         return map;
     }
@@ -145,13 +176,13 @@ public class PostService {
         if (userID != 0 || !Main.session.isEmpty()) {
             user = userRepository.getOne(userID);
             switch (status) {
-                case ("inactive"):
+                case INACTIVE:
                     page = postRepository.findPostsByMy(user.getId(), 0, String.valueOf(ModerationStatus.NEW), pageable);
                     break;
-                case ("pending"):
+                case PENDING:
                     page = postRepository.findPostsByMy(user.getId(), 1, String.valueOf(ModerationStatus.NEW), pageable);
                     break;
-                case ("declined"):
+                case DECLINED:
                     page = postRepository.findPostsByMy(user.getId(), 1, String.valueOf(ModerationStatus.DECLINED), pageable);
                     break;
                 default:
@@ -180,9 +211,9 @@ public class PostService {
         checkOffsetAndLimit(offset, limit);
         Pageable pageable = PageRequest.of(offsetInt, limitInt);
         Calendar endDate = Calendar.getInstance();
-        endDate.setTime(shortSdf.parse(date));
+        endDate.setTime(DATE_FORMAT.parse(date));
         endDate.add(Calendar.DAY_OF_MONTH, 1);
-        String end = shortSdf.format(endDate.getTime());
+        String end = DATE_FORMAT.format(endDate.getTime());
         Page<Post> page = postRepository.findByDate(date, end, pageable);
         return getMapResponseForm(page);
     }
@@ -192,10 +223,10 @@ public class PostService {
         Pageable pageable = PageRequest.of(offsetInt, limitInt);
         Page<Post> page;
         switch (status) {
-            case ("declined"):
+            case DECLINED:
                 page = postRepository.findPostsByModeration(1, String.valueOf(ModerationStatus.DECLINED), pageable);
                 break;
-            case ("accepted"):
+            case ACCEPTED:
                 page = postRepository.findPostsByModeration(1, String.valueOf(ModerationStatus.ACCEPTED), pageable);
                 break;
             default:
@@ -214,34 +245,34 @@ public class PostService {
     }
 
     public Map<String, Object> addPost(JSONObject jsonObject) throws NoSuchAlgorithmException {
-        String timestamp = jsonObject.get("timestamp").toString();
-        String active = jsonObject.get("active").toString();
-        String title = jsonObject.get("title").toString();
-        JSONArray tags = jsonObject.getJSONArray("tags");
-        String text = jsonObject.get("text").toString();
+        String timestamp = jsonObject.get(TIMESTAMP).toString();
+        String active = jsonObject.get(ACTIVE).toString();
+        String title = jsonObject.get(TITLE).toString();
+        JSONArray tags = jsonObject.getJSONArray(TAGS);
+        String text = jsonObject.get(TEXT).toString();
         User user = getAuthorizedUser();
         Map<String, Object> map = new HashMap<>();
         Map<String, Object> errors = new HashMap<>();
         long nowTime = System.currentTimeMillis();
         long timestampLong = Long.parseLong(timestamp) * 1000;
         if (user == null){
-            errors.put("title", "Пользователь не авторизован");
+            errors.put(TITLE, NOT_AUTH);
         }
         if (title.isEmpty()) {
-            errors.put("title", "Заголовок не установлен");
+            errors.put(TITLE, TITLE_NOT_INSTALLED);
         }
         if (title.length() < 3){
-            errors.put("title", "Заголовок публикации слишком короткий");
+            errors.put(TITLE, TITLE_IS_SHORT);
         }
         if (text.length() < 50) {
-            errors.put("text", "Текст публикации слишком короткий");
+            errors.put(TEXT, TEXT_IS_SHORT);
         }
         if (nowTime < timestampLong) {
             timestampLong = nowTime;
         }
         if (errors.isEmpty()) {
-            Post post = new Post(title, text, active, sdf.format(timestampLong));
-            if (!Main.globalSettings.get("POST_PREMODERATION")) {
+            Post post = new Post(title, text, active, SIMPLE_DATE_FORMAT.format(timestampLong));
+            if (!Main.globalSettings.get(POST_PREMODERATION)) {
                 post.setModerationStatus(ModerationStatus.ACCEPTED);
             }
             post.setUser(user);
@@ -257,36 +288,36 @@ public class PostService {
             });
             post.setTag2Posts(tag2Posts);
             postRepository.save(post);
-            map.put("result", true);
+            map.put(RESULT, true);
         } else {
-            map.put("result", false);
-            map.put("errors", errors);
+            map.put(RESULT, false);
+            map.put(ERRORS, errors);
         }
         return map;
     }
 
     public Map<String, Object> updatePost(JSONObject jsonObject, Long id) throws NoSuchAlgorithmException {
-        String timestamp = jsonObject.get("timestamp").toString();
-        int active = jsonObject.getInteger("active");
-        String title = jsonObject.get("title").toString();
-        JSONArray tags = jsonObject.getJSONArray("tags");
-        String text = jsonObject.get("text").toString();
+        String timestamp = jsonObject.get(TIMESTAMP).toString();
+        int active = jsonObject.getInteger(ACTIVE);
+        String title = jsonObject.get(TITLE).toString();
+        JSONArray tags = jsonObject.getJSONArray(TAGS);
+        String text = jsonObject.get(TEXT).toString();
         User user = getAuthorizedUser();
         Map<String, Object> map = new HashMap<>();
         Map<String, Object> errors = new HashMap<>();
         long nowTime = System.currentTimeMillis();
         long timestampLong = Long.parseLong(timestamp) * 1000;
         if (user == null) {
-            errors.put("title", "Пользователь не авторизован");
+            errors.put(TITLE, NOT_AUTH);
         }
         if (title.isEmpty()){
-            errors.put("title", "Заголовок не установлен");
+            errors.put(TITLE, TITLE_NOT_INSTALLED);
         }
         if (title.length() < 3){
-            errors.put("title", "Заголовок публикации слишком короткий");
+            errors.put(TITLE, TITLE_IS_SHORT);
         }
         if (text.length() < 50) {
-            errors.put("text", "Текст публикации слишком короткий");
+            errors.put(TITLE, TEXT_IS_SHORT);
         }
         if (nowTime < timestampLong) {
             timestampLong = nowTime;
@@ -294,7 +325,7 @@ public class PostService {
         if (errors.isEmpty()) {
             Post post = postRepository.getOne(id);
             post.setText(text);
-            post.setTime(sdf.format(timestampLong));
+            post.setTime(SIMPLE_DATE_FORMAT.format(timestampLong));
             post.setIsActive(active);
             post.setTitle(title);
             tag2PostRepository.deleteTag2PostWithPostId(id);
@@ -309,51 +340,51 @@ public class PostService {
                 tag2Posts.add(tag2Post);
             });
             post.setTag2Posts(tag2Posts);
-            if (Main.globalSettings.get("POST_PREMODERATION")) {
+            if (Main.globalSettings.get(POST_PREMODERATION)) {
                 post.setModerationStatus(ModerationStatus.ACCEPTED);
             } else {
                 post.setModerationStatus(ModerationStatus.NEW);
             }
             postRepository.save(post);
-            map.put("result", true);
+            map.put(RESULT, true);
         } else {
-            map.put("result", false);
-            map.put("errors", errors);
+            map.put(RESULT, false);
+            map.put(ERRORS, errors);
         }
         return map;
     }
 
     public Map<String, Object> like(JSONObject jsonObject) {
         Map<String, Object> map = new HashMap<>();
-        Long postId = jsonObject.getLong("post_id");
+        Long postId = jsonObject.getLong(POST_ID);
         Post post = postRepository.getOne(postId);
         User user = getAuthorizedUser();
         PostVote lastPostVote;
         if (postId == null){
-            map.put("result", false);
+            map.put(RESULT, false);
         }
         if (user == null){
-            map.put("result", false);
+            map.put(RESULT, false);
         }
         if (map.isEmpty()) {
             List<PostVote> lastPostVotes = postVoteRepository.findPostVote(post, user);
             if (!lastPostVotes.isEmpty()) {
                 lastPostVote = lastPostVotes.get(0);
                 if (lastPostVote.getValue().equals("1")) {
-                    map.put("result", false);
+                    map.put(RESULT, false);
                 } else {
                     lastPostVote.setValue("1");
                     postVoteRepository.save(lastPostVote);
-                    map.put("result", true);
+                    map.put(RESULT, true);
                 }
             } else {
                 PostVote postVote = new PostVote();
                 postVote.setPost(post);
                 postVote.setUser(user);
                 postVote.setValue("1");
-                postVote.setTime(sdf.format(System.currentTimeMillis()));
+                postVote.setTime(SIMPLE_DATE_FORMAT.format(System.currentTimeMillis()));
                 postVoteRepository.save(postVote);
-                map.put("result", true);
+                map.put(RESULT, true);
             }
         }
         return map;
@@ -361,35 +392,35 @@ public class PostService {
 
     public Map<String, Object> dislike(JSONObject jsonObject) {
         Map<String, Object> map = new HashMap<>();
-        Long postId = jsonObject.getLong("post_id");
+        Long postId = jsonObject.getLong(POST_ID);
         Post post = postRepository.getOne(postId);
         User user = getAuthorizedUser();
         PostVote lastPostVote;
         if (postId == null){
-            map.put("result", false);
+            map.put(RESULT, false);
         }
         if (user == null){
-            map.put("result", false);
+            map.put(RESULT, false);
         }
         if (map.isEmpty()) {
             List<PostVote> lastPostVotes = postVoteRepository.findPostVote(post, user);
             if (!lastPostVotes.isEmpty()) {
                 lastPostVote = lastPostVotes.get(0);
                 if (lastPostVote.getValue().equals("-1")) {
-                    map.put("result", false);
+                    map.put(RESULT, false);
                 } else {
                     lastPostVote.setValue("-1");
                     postVoteRepository.save(lastPostVote);
-                    map.put("result", true);
+                    map.put(RESULT, true);
                 }
             } else {
                 PostVote postVote = new PostVote();
                 postVote.setPost(post);
                 postVote.setUser(user);
                 postVote.setValue("-1");
-                postVote.setTime(sdf.format(System.currentTimeMillis()));
+                postVote.setTime(SIMPLE_DATE_FORMAT.format(System.currentTimeMillis()));
                 postVoteRepository.save(postVote);
-                map.put("result", true);
+                map.put(RESULT, true);
             }
         }
         return map;
@@ -407,11 +438,11 @@ public class PostService {
             }
         });
         if (!page.isEmpty()) {
-            map.put("count", postCount);
-            map.put("posts", arrayList);
+            map.put(COUNT, postCount);
+            map.put(POSTS, arrayList);
         } else {
-            map.put("count", 0);
-            map.put("posts", new ArrayList());
+            map.put(COUNT, 0);
+            map.put(POSTS, new ArrayList());
         }
         return map;
     }
@@ -437,37 +468,37 @@ public class PostService {
 
     public static Map<String, Object> getSinglePost(Post singlePost) throws ParseException {
         Map<String, Object> map = new HashMap<>();
-        map.put("id", singlePost.getId());
-        map.put("active", true);
-        map.put("timestamp", sdf.parse(singlePost.getTime()).getTime() / 1000);
-        map.put("user", singlePost.getUser().getUserShortMap());
-        map.put("title", singlePost.getTitle());
-        map.put("text", singlePost.getText());
+        map.put(ID, singlePost.getId());
+        map.put(ACTIVE, true);
+        map.put(TIMESTAMP, SIMPLE_DATE_FORMAT.parse(singlePost.getTime()).getTime() / 1000);
+        map.put(USER, singlePost.getUser().getUserShortMap());
+        map.put(TITLE, singlePost.getTitle());
+        map.put(TEXT, singlePost.getText());
         long likeCount = singlePost.getPostsVote().stream().filter(p -> p.getValue().equals("1")).count();
-        map.put("likeCount", likeCount);
+        map.put(LIKE_COUNT, likeCount);
         long disLikeCount = singlePost.getPostsVote().stream().filter(p -> p.getValue().equals("-1")).count();
-        map.put("dislikeCount", disLikeCount);
-        map.put("viewCount", singlePost.getViewCount());
-        map.put("comments", PostComment.getPostCommentsArray(singlePost.getPostComments()));
+        map.put(DISLIKE_COUNT, disLikeCount);
+        map.put(VIEW_COUNT, singlePost.getViewCount());
+        map.put(COMMENTS, PostComment.getPostCommentsArray(singlePost.getPostComments()));
         ArrayList<String> tags = new ArrayList<>();
         singlePost.getTag2Posts().forEach(tag2Post -> tags.add(tag2Post.getTag().getName()));
-        map.put("tags", tags);
+        map.put(TAGS, tags);
         return map;
     }
 
     public Map<String, Object> getMapResponse(Post post) throws ParseException {
         Map<String, Object> map = new HashMap<>();
-        map.put("id", post.getId());
-        map.put("timestamp", sdf.parse(post.getTime()).getTime() / 1000);
-        map.put("user", post.getUser().getUserShortMap());
-        map.put("title", post.getTitle());
-        map.put("announce", Jsoup.parse(post.getText()).text());
+        map.put(ID, post.getId());
+        map.put(TIMESTAMP, SIMPLE_DATE_FORMAT.parse(post.getTime()).getTime() / 1000);
+        map.put(USER, post.getUser().getUserShortMap());
+        map.put(TITLE, post.getTitle());
+        map.put(ANNOUNCE, Jsoup.parse(post.getText()).text());
         long likeCount = post.getPostsVote().stream().filter(p -> p.getValue().equals("1")).count();
-        map.put("likeCount", likeCount);
+        map.put(LIKE_COUNT, likeCount);
         long disLikeCount = post.getPostsVote().stream().filter(p -> p.getValue().equals("-1")).count();
-        map.put("dislikeCount", disLikeCount);
-        map.put("commentCount", post.getPostComments().size());
-        map.put("viewCount", post.getViewCount());
+        map.put(DISLIKE_COUNT, disLikeCount);
+        map.put(COMMENT_COUNT, post.getPostComments().size());
+        map.put(VIEW_COUNT, post.getViewCount());
         return map;
     }
 }
